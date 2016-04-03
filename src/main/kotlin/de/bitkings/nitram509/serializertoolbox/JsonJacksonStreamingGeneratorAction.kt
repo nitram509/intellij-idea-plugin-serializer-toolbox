@@ -77,14 +77,14 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     importClassByName(psiClass, "com.fasterxml.jackson.core.JsonGenerator")
     importClassByName(psiClass, "com.fasterxml.jackson.core.JsonEncoding")
 
-    val builder = StringBuilder()
-    builder.append("public void serialize(File targetFile) throws IOException {\n")
-    builder.append("  JsonFactory jsonFactory = new JsonFactory();")
-    builder.append("  JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8);")
-    builder.append("  writeObject(jg, this);")
-    builder.append("  jg.close();")
-    builder.append("}")
-    setNewMethod(psiClass, builder.toString(), "serializeFile")
+    val sb = StringBuilder()
+    sb.append("public void serialize(File targetFile) throws IOException {\n")
+    sb.append("  JsonFactory jsonFactory = new JsonFactory();\n")
+    sb.append("  JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8);\n")
+    sb.append("  writeObject(jg, this);\n")
+    sb.append("  jg.close();\n")
+    sb.append("}\n")
+    setNewMethod(psiClass, sb.toString(), "serializeFile")
   }
 
   private fun generateSerializeByOutputStream(psiClass: PsiClass) {
@@ -94,30 +94,34 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     importClassByName(psiClass, "com.fasterxml.jackson.core.JsonGenerator")
     importClassByName(psiClass, "com.fasterxml.jackson.core.JsonEncoding")
 
-    val builder = StringBuilder()
-    builder.append("public void serialize(OutputStream outputStream) throws IOException {\n")
-    builder.append("  JsonFactory jsonFactory = new JsonFactory();")
-    builder.append("  JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);")
-    builder.append("  writeObject(jg, this);")
-    builder.append("  jg.close();")
-    builder.append("}")
-    setNewMethod(psiClass, builder.toString(), "serializeOutputStream")
+    val sb = StringBuilder()
+    sb.append("public void serialize(OutputStream outputStream) throws IOException {\n")
+    sb.append("  JsonFactory jsonFactory = new JsonFactory();\n")
+    sb.append("  JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);\n")
+    sb.append("  writeObject(jg, this);\n")
+    sb.append("  jg.close();\n")
+    sb.append("}\n")
+    setNewMethod(psiClass, sb.toString(), "serializeOutputStream")
   }
 
   private fun generateWriteObject(psiClass: PsiClass, fields: List<PsiField>) {
-    val builder = StringBuilder()
-    builder.append("private void writeObject(JsonGenerator jg, Forecast forecast) throws IOException { \n")
-    builder.append("  jg.writeStartObject();")
+    val sb = StringBuilder()
+    sb.append("private void writeObject(JsonGenerator jg, Forecast forecast) throws IOException {\n")
+    sb.append("  jg.writeStartObject();\n")
 
-    appendWriteFields(builder, psiClass, fields)
+    appendWriteFields(sb, fields)
 
-    builder.append("  jg.writeEndObject();")
-    builder.append("}")
-    setNewMethod(psiClass, builder.toString(), "writeObject")
+    sb.append("  jg.writeEndObject();\n")
+    sb.append("}")
+    setNewMethod(psiClass, sb.toString(), "writeObject")
   }
 
-  private fun appendWriteFields(builder: StringBuilder, psiClass: PsiClass, fields: List<PsiField>) {
-
+  private fun appendWriteFields(sb: StringBuilder, fields: List<PsiField>) {
+    for (field in fields) {
+      sb.append("        // ").append(field.name).append("\n")
+      sb.append("jg.writeFieldName(\"").append(field.name).append("\");\n")
+      sb.append("jg.writeString(forecast.").append(field.name).append(".toGMTString());\n");
+    }
   }
 
   private fun importClassByName(psiClass: PsiClass, className: String) {
