@@ -7,11 +7,8 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
-import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
-import org.apache.commons.lang.WordUtils
-import java.util.*
 
 class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
 
@@ -24,6 +21,12 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     }
   }
 
+  override fun update(e: AnActionEvent) {
+    val psiClass = getPsiClassFromContext(e)
+    e.presentation.isEnabled = psiClass != null
+    e.presentation.icon = IconConstants.HZ_ACTION
+  }
+
   fun generate(psiClass: PsiClass, fields: List<PsiField>) {
     object : WriteCommandAction.Simple<Unit>(psiClass.project, psiClass.containingFile) {
       override fun run() {
@@ -34,19 +37,19 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     }.execute()
   }
 
-  protected fun setNewMethod(psiClass: PsiClass, newMethodBody: String, methodName: String) {
+  private fun setNewMethod(psiClass: PsiClass, newMethodBody: String, methodName: String) {
     val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
     val newEqualsMethod = elementFactory.createMethodFromText(newMethodBody, psiClass)
     val method = addOrReplaceMethod(psiClass, newEqualsMethod, methodName)
     JavaCodeStyleManager.getInstance(psiClass.project).shortenClassReferences(method)
   }
 
-  protected fun addOrReplaceMethod(psiClass: PsiClass, newEqualsMethod: PsiMethod, methodName: String): PsiElement {
-    val existingEqualsMethod = findMethod(psiClass, methodName)
-    return if (existingEqualsMethod != null) existingEqualsMethod.replace(newEqualsMethod) else psiClass.add(newEqualsMethod)
+  private fun addOrReplaceMethod(psiClass: PsiClass, newMethod: PsiMethod, methodName: String): PsiElement {
+    val existingMethod = findMethod(psiClass, methodName)
+    return if (existingMethod != null) existingMethod.replace(newMethod) else psiClass.add(newMethod)
   }
 
-  protected fun findMethod(psiClass: PsiClass, methodName: String): PsiMethod? {
+  private fun findMethod(psiClass: PsiClass, methodName: String): PsiMethod? {
     val allMethods = psiClass.allMethods
     for (method in allMethods) {
       if (psiClass.name == method.containingClass!!.name && methodName == method.name) {
@@ -54,12 +57,6 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
       }
     }
     return null
-  }
-
-  override fun update(e: AnActionEvent) {
-    val psiClass = getPsiClassFromContext(e)
-    e.presentation.isEnabled = psiClass != null
-    e.presentation.icon = IconConstants.HZ_ACTION
   }
 
   private fun getPsiClassFromContext(e: AnActionEvent): PsiClass? {
@@ -112,25 +109,14 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     builder.append("private void writeObject(JsonGenerator jg, Forecast forecast) throws IOException { \n")
     builder.append("  jg.writeStartObject();")
 
-    val remaining = writeFields(psiClass, fields, builder)
-    writeObjects(psiClass, remaining, builder)
+    appendWriteFields(builder, psiClass, fields)
 
     builder.append("  jg.writeEndObject();")
     builder.append("}")
     setNewMethod(psiClass, builder.toString(), "writeObject")
   }
 
-  private fun writeFields(psiClass: PsiClass, fields: List<PsiField>, builder: StringBuilder): List<PsiField> {
-    val remaining = ArrayList<PsiField>()
-    val project = psiClass.project
-    val scope = GlobalSearchScope.allScope(project)
-
-    return remaining
-  }
-
-  private fun writeObjects(psiClass: PsiClass, fields: List<PsiField>, builder: StringBuilder) {
-    val project = psiClass.project
-    val scope = GlobalSearchScope.allScope(project)
+  private fun appendWriteFields(builder: StringBuilder, psiClass: PsiClass, fields: List<PsiField>) {
 
   }
 
