@@ -23,8 +23,7 @@ class SelectFieldsDialog(psiClass: PsiClass) : DialogWrapper(psiClass.project) {
     fieldList.cellRenderer = DefaultPsiElementCellRenderer()
     val decorator = ToolbarDecorator.createDecorator(fieldList)
     decorator.disableAddAction()
-    val panel = decorator.createPanel()
-    mainPanel = LabeledComponent.create(panel, title)
+    mainPanel = LabeledComponent.create(decorator.createPanel(), title)
     init()
   }
 
@@ -34,21 +33,19 @@ class SelectFieldsDialog(psiClass: PsiClass) : DialogWrapper(psiClass.project) {
 
   val selectedFields: List<PsiField>
     get() {
-      val selectionModle = fieldList.selectionModel
-      val iMin = selectionModle.minSelectionIndex
-      val iMax = selectionModle.maxSelectionIndex
-
+      val iMin = fieldList.selectionModel.minSelectionIndex
+      val iMax = fieldList.selectionModel.maxSelectionIndex
       if (iMin < 0 || iMax < 0) {
         return emptyList()
       }
 
-      val selectedItems = ArrayList<PsiField>()
+      val selectedFields = ArrayList<PsiField>()
       for (i in iMin..iMax) {
-        if (selectionModle.isSelectedIndex(i)) {
-          selectedItems.add(fieldList.model.getElementAt(i) as PsiField)
+        if (fieldList.selectionModel.isSelectedIndex(i)) {
+          selectedFields.add(fieldList.model.getElementAt(i) as PsiField)
         }
       }
-      return selectedItems
+      return selectedFields
     }
 
 }
