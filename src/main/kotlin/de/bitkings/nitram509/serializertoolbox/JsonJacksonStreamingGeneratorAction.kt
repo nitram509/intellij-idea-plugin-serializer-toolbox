@@ -110,7 +110,7 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     sb.append("  jg.writeStartObject();\n")
 
     appendWriteFields(sb, fields)
-
+    sb.append("        // done.\n")
     sb.append("  jg.writeEndObject();\n")
     sb.append("}")
     setNewMethod(psiClass, sb.toString(), "writeObject")
@@ -118,9 +118,17 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
 
   private fun appendWriteFields(sb: StringBuilder, fields: List<PsiField>) {
     for (field in fields) {
-      sb.append("        // ").append(field.name).append("\n")
+      sb.append("        // write field ").append(field.name).append("...\n")
       sb.append("jg.writeFieldName(\"").append(field.name).append("\");\n")
-      sb.append("jg.writeString(forecast.").append(field.name).append(".toGMTString());\n");
+      val deepType = field.type.deepComponentType
+      if (deepType in listOf(PsiType.BYTE, PsiType.SHORT, PsiType.INT, PsiType.LONG, PsiType.FLOAT, PsiType.DOUBLE)) {
+        // also BigInteger + BigDecimal
+        sb.append("jg.writeNumber(forecast.").append(field.name).append(");\n");
+      } else if (PsiType.BOOLEAN.equals(deepType) ) {
+        sb.append("jg.writeBoolean(forecast.").append(field.name).append(");\n");
+      } else {
+        sb.append("jg.writeObject(forecast.").append(field.name).append(");\n");
+      }
     }
   }
 
