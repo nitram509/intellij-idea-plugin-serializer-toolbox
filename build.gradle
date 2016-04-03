@@ -1,0 +1,47 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+    }
+}
+
+plugins {
+    id "org.jetbrains.intellij" version "0.0.42"
+}
+
+apply plugin: 'org.jetbrains.intellij'
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+
+intellij {
+    pluginName 'serializer-toolbox'
+    version ideaVersion
+    updateSinceUntilBuild false
+    publish {
+        username publishUsername
+        password publishPassword
+        pluginId '9999'
+        channel publishChannel
+    }
+}
+group 'de.bitkings.nitram509'
+version = "${version}"
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.12'
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    main.java.srcDirs += 'src/main/kotlin'
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
+}
