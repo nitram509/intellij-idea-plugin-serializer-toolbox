@@ -144,8 +144,7 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
       sb.append("        // write field ").append(field.name).append("...\n")
       sb.append("jg.writeFieldName(\"").append(field.name).append("\");\n")
       val deepType = field.type.deepComponentType
-      if (deepType in listOf(PsiType.BYTE, PsiType.SHORT, PsiType.INT, PsiType.LONG, PsiType.FLOAT, PsiType.DOUBLE)) {
-        // also BigInteger + BigDecimal
+      if (isWritableNumberType(deepType)) {
         sb.append("jg.writeNumber(forecast.").append(field.name).append(");\n");
       } else if (PsiType.BOOLEAN.equals(deepType)) {
         sb.append("jg.writeBoolean(forecast.").append(field.name).append(");\n");
@@ -153,6 +152,11 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
         sb.append("jg.writeObject(forecast.").append(field.name).append(");\n");
       }
     }
+  }
+
+  private fun isWritableNumberType(deepType: PsiType): Boolean {
+    val isBasisType = deepType in listOf(PsiType.BYTE, PsiType.SHORT, PsiType.INT, PsiType.LONG, PsiType.FLOAT, PsiType.DOUBLE)
+    return isBasisType || deepType.equalsToText("java.math.BigDecimal") || deepType.equalsToText("java.math.BigInteger")
   }
 
   private fun importClassByName(psiClass: PsiClass, classNameToImport: String) {
