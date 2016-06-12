@@ -25,6 +25,8 @@ intellij {
         pluginId '????'
         channel publishChannel
     }
+
+    sandboxDirectory = project.rootDir.canonicalPath + "/.sandbox"
 }
 group 'de.bitkings.nitram509'
 version = "${version}"
@@ -44,4 +46,6 @@ sourceSets {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
+
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
 }
