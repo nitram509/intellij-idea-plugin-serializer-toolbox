@@ -147,7 +147,7 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
       if (deepType in listOf(PsiType.BYTE, PsiType.SHORT, PsiType.INT, PsiType.LONG, PsiType.FLOAT, PsiType.DOUBLE)) {
         // also BigInteger + BigDecimal
         sb.append("jg.writeNumber(forecast.").append(field.name).append(");\n");
-      } else if (PsiType.BOOLEAN.equals(deepType) ) {
+      } else if (PsiType.BOOLEAN.equals(deepType)) {
         sb.append("jg.writeBoolean(forecast.").append(field.name).append(");\n");
       } else {
         sb.append("jg.writeObject(forecast.").append(field.name).append(");\n");
@@ -155,15 +155,18 @@ class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
     }
   }
 
-  private fun importClassByName(psiClass: PsiClass, className: String) {
+  private fun importClassByName(psiClass: PsiClass, classNameToImport: String) {
     val project = psiClass.project
     val scope = GlobalSearchScope.allScope(project)
     val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
-    val typeByName = PsiType.getTypeByName(className, project, scope)
-    val importStatement = elementFactory.createImportStatement(typeByName.resolve() as PsiClass)
-    val importList = (psiClass.containingFile as PsiJavaFile).importList
-    if (null == importList?.findSingleClassImportStatement(className)) {
-      importList?.add(importStatement)
+    val typeByName = PsiType.getTypeByName(classNameToImport, project, scope)
+    val resolvedPsiClass = typeByName.resolve()
+    if (resolvedPsiClass != null) {
+      val importStatement = elementFactory.createImportStatement(resolvedPsiClass)
+      val importList = (psiClass.containingFile as PsiJavaFile).importList
+      if (null == importList?.findSingleClassImportStatement(classNameToImport)) {
+        importList?.add(importStatement)
+      }
     }
   }
 
