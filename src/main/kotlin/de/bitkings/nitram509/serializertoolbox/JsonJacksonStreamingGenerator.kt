@@ -27,6 +27,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.search.GlobalSearchScope
+import java.lang.Character.*
 
 class JsonJacksonStreamingGenerator {
 
@@ -76,13 +77,26 @@ class JsonJacksonStreamingGenerator {
 
   private fun generateWriteObject(psiClass: PsiClass, fields: List<PsiField>) {
     val sb = StringBuilder()
-    sb.append("private void writeObject(JsonGenerator jg, Forecast forecast) throws IOException {\n")
+    val instanceName = createInstanceNameDeclaration(psiClass)
+    sb.append("private void writeObject(JsonGenerator jg, ${psiClass.name} " + instanceName + ") throws IOException {\n")
     sb.append("  jg.writeStartObject();\n")
-    appendWriteFields(sb, fields)
+    appendWriteFields(sb, fields, instanceName)
     sb.append("        // done.\n")
     sb.append("  jg.writeEndObject();\n")
     sb.append("}")
     setNewMethod(psiClass, sb.toString(), "writeObject")
+  }
+
+  private fun createInstanceNameDeclaration(psiClass: PsiClass): String {
+    val clzName = psiClass.name
+    if (clzName != null) {
+      val firstLetter = clzName.toCharArray()[0]
+      if (isLowerCase(firstLetter)) {
+        return "$$clzName"
+      }
+      return toLowerCase(firstLetter) + clzName.substring(1)
+    }
+    throw UnsupportedOperationException("Not supported yet.")
   }
 
   private fun setNewMethod(psiClass: PsiClass, newMethodBody: String, methodName: String) {
@@ -107,22 +121,22 @@ class JsonJacksonStreamingGenerator {
     return null
   }
 
-  private fun appendWriteFields(sb: StringBuilder, fields: List<PsiField>) {
+  private fun appendWriteFields(sb: StringBuilder, fields: List<PsiField>, instanceName: String) {
     for (field in fields) {
       sb.append("        // write field ").append(field.name).append("...\n")
       sb.append("jg.writeFieldName(\"").append(field.name).append("\");\n")
       val deepType = field.type.deepComponentType
       val isCompatibleArrayBasisType = deepType in listOf(PsiType.INT, PsiType.LONG, PsiType.DOUBLE)
       if (field.type.arrayDimensions == 1 && isCompatibleArrayBasisType) {
-        sb.append("jg.writeArray(forecast.ints, 0 ,forecast." + field.name + ".length);");
+        sb.append("jg.writeArray($instanceName.ints, 0 ,$instanceName." + field.name + ".length);");
       } else if (isWritableNumberType(deepType)) {
-        sb.append("jg.writeNumber(forecast.").append(field.name).append(");\n");
+        sb.append("jg.writeNumber($instanceName.").append(field.name).append(");\n");
       } else if (PsiType.BOOLEAN.equals(deepType)) {
-        sb.append("jg.writeBoolean(forecast.").append(field.name).append(");\n");
+        sb.append("jg.writeBoolean($instanceName.").append(field.name).append(");\n");
       } else if (isJavaStringType(deepType)) {
-        sb.append("jg.writeString(forecast.").append(field.name).append(");\n");
+        sb.append("jg.writeString($instanceName.").append(field.name).append(");\n");
       } else {
-        sb.append("jg.writeObject(forecast.").append(field.name).append(");\n");
+        sb.append("jg.writeObject($instanceName.").append(field.name).append(");\n");
       }
     }
   }
