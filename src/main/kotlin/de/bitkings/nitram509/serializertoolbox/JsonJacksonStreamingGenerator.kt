@@ -78,7 +78,6 @@ class JsonJacksonStreamingGenerator {
     val sb = StringBuilder()
     sb.append("private void writeObject(JsonGenerator jg, Forecast forecast) throws IOException {\n")
     sb.append("  jg.writeStartObject();\n")
-
     appendWriteFields(sb, fields)
     sb.append("        // done.\n")
     sb.append("  jg.writeEndObject();\n")
@@ -113,10 +112,15 @@ class JsonJacksonStreamingGenerator {
       sb.append("        // write field ").append(field.name).append("...\n")
       sb.append("jg.writeFieldName(\"").append(field.name).append("\");\n")
       val deepType = field.type.deepComponentType
-      if (isWritableNumberType(deepType)) {
+      val isCompatibleArrayBasisType = deepType in listOf(PsiType.INT, PsiType.LONG, PsiType.DOUBLE)
+      if (field.type.arrayDimensions == 1 && isCompatibleArrayBasisType) {
+        sb.append("jg.writeArray(forecast.ints, 0 ,forecast." + field.name + ".length);");
+      } else if (isWritableNumberType(deepType)) {
         sb.append("jg.writeNumber(forecast.").append(field.name).append(");\n");
       } else if (PsiType.BOOLEAN.equals(deepType)) {
         sb.append("jg.writeBoolean(forecast.").append(field.name).append(");\n");
+      } else if (isJavaStringType(deepType)) {
+        sb.append("jg.writeString(forecast.").append(field.name).append(");\n");
       } else {
         sb.append("jg.writeObject(forecast.").append(field.name).append(");\n");
       }
@@ -126,6 +130,10 @@ class JsonJacksonStreamingGenerator {
   private fun isWritableNumberType(deepType: PsiType): Boolean {
     val isBasisType = deepType in listOf(PsiType.BYTE, PsiType.SHORT, PsiType.INT, PsiType.LONG, PsiType.FLOAT, PsiType.DOUBLE)
     return isBasisType || deepType.equalsToText("java.math.BigDecimal") || deepType.equalsToText("java.math.BigInteger")
+  }
+
+  private fun isJavaStringType(deepType: PsiType): Boolean {
+    return deepType.equalsToText("java.lang.String")
   }
 
   private fun importClassByName(psiClass: PsiClass, classNameToImport: String) {
