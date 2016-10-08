@@ -51,5 +51,5 @@ dependencies {
 
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
     testCompile "com.intellij:openapi:7.0.3"
-    testCompile "com.fasterxml.jackson:jackson-parent:2.8"
+    testCompile "com.fasterxml.jackson.core:jackson-core:2.8.1"
 }

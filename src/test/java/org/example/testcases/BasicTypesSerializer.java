@@ -23,49 +23,53 @@
 
 package org.example.testcases;
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
 public class BasicTypesSerializer {
-  public void serialize(File targetFile) throws IOException {
+  public void serialize(File targetFile, BasicTypes basicTypes) throws IOException {
     JsonFactory jsonFactory = new JsonFactory();
     JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8);
-    writeObject(jg, this);
+    writeObject(jg, basicTypes);
     jg.close();
   }
-//
-//  public void serialize(OutputStream outputStream) throws IOException {
-//    JsonFactory jsonFactory = new JsonFactory();
-//    JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);
-//    writeObject(jg, this);
-//    jg.close();
-//  }
-//
-//  private void writeObject(JsonGenerator jg, BasicTypes basicTypes) throws IOException {
-//    jg.writeStartObject();
-//    // write field aString...
-//    jg.writeFieldName("aString");
-//    jg.writeObject(basicTypes.aString);
-//    // write field aBoolean...
-//    jg.writeFieldName("aBoolean");
-//    jg.writeBoolean(basicTypes.aBoolean);
-//    // write field aFloat...
-//    jg.writeFieldName("aFloat");
-//    jg.writeNumber(basicTypes.aFloat);
-//    // write field aDouble...
-//    jg.writeFieldName("aDouble");
-//    jg.writeNumber(basicTypes.aDouble);
-//    // write field aInt...
-//    jg.writeFieldName("aInt");
-//    jg.writeNumber(basicTypes.aInt);
-//    // write field aShort...
-//    jg.writeFieldName("aShort");
-//    jg.writeNumber(basicTypes.aShort);
-//    // write field aByte...
-//    jg.writeFieldName("aByte");
-//    jg.writeNumber(basicTypes.aByte);
-//    // done.
-//    jg.writeEndObject();
-//  }
+
+  public void serialize(OutputStream outputStream, BasicTypes basicTypes) throws IOException {
+    JsonFactory jsonFactory = new JsonFactory();
+    JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);
+    writeObject(jg, basicTypes);
+    jg.close();
+  }
+
+  private void writeObject(JsonGenerator jg, BasicTypes basicType) throws IOException {
+    jg.writeStartObject();
+    // write field aString...
+    jg.writeFieldName("aString");
+    jg.writeString(basicType.aString);
+    // write field aBoolean...
+    jg.writeFieldName("aBoolean");
+    jg.writeBoolean(basicType.aBoolean);
+    // write field aFloat...
+    jg.writeFieldName("aFloat");
+    jg.writeNumber(basicType.aFloat);
+    // write field aDouble...
+    jg.writeFieldName("aDouble");
+    jg.writeNumber(basicType.aDouble);
+    // write field aInt...
+    jg.writeFieldName("aInt");
+    jg.writeNumber(basicType.aInt);
+    // write field aShort...
+    jg.writeFieldName("aShort");
+    jg.writeNumber(basicType.aShort);
+    // write field aByte...
+    jg.writeFieldName("aByte");
+    jg.writeNumber(basicType.aByte);
+    // done.
+    jg.writeEndObject();
+  }
 }
