@@ -21,34 +21,14 @@
  * THE SOFTWARE.
  */
 
-package de.bitkings.nitram509.serializertoolbox
+package org.example.testcases;
 
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiField
-import com.intellij.psi.PsiJavaFile
-import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
-import org.junit.Test
-
-class JsonJacksonStreamingGeneratorTest : LightCodeInsightFixtureTestCase() {
-
-  private var generator: JsonJacksonStreamingGenerator = JsonJacksonStreamingGenerator()
-
-  @Test
-  fun test_a_test() {
-    val sampleFile = myFixture.copyFileToProject("src/test/java/org/example/testcases/BasicTypes.java")
-    val psiClass = (this.psiManager.findFile(sampleFile) as PsiJavaFile).classes[0]
-
-    generator.generate(psiClass, findAllFields(psiClass))
-
-    println(psiClass.text)
-  }
-
-  private fun findAllFields(psiClass: PsiClass): List<PsiField> {
-    val fields: MutableList<PsiField> = mutableListOf()
-    for (field in psiClass.fields) {
-      fields.add(field)
-    }
-    return fields
-  }
-
+public class BasicTypes {
+  String aString;
+  boolean aBoolean;
+  float aFloat;
+  double aDouble;
+  int aInt;
+  short aShort;
+  byte aByte;
 }
