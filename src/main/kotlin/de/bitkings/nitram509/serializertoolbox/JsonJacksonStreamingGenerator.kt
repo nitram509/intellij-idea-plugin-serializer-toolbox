@@ -41,6 +41,8 @@ class JsonJacksonStreamingGenerator {
     }.execute()
   }
 
+  // TODO: write JsonFactory jsonFactory = new JsonFactory(); as field, because quie expensive operation
+
   private fun generateSerializeByFile(psiClass: PsiClass) {
     importClassByName(psiClass, "java.io.File")
     importClassByName(psiClass, "java.io.IOException")
