@@ -34,16 +34,16 @@ import java.io.OutputStream;
 public class BasicTypesSerializer {
   public void serialize(File targetFile, BasicTypes basicTypes) throws IOException {
     JsonFactory jsonFactory = new JsonFactory();
-    JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8);
-    writeObject(jg, basicTypes);
-    jg.close();
+    try (JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8)) {
+      writeObject(jg, basicTypes);
+    }
   }
 
   public void serialize(OutputStream outputStream, BasicTypes basicTypes) throws IOException {
     JsonFactory jsonFactory = new JsonFactory();
-    JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);
-    writeObject(jg, basicTypes);
-    jg.close();
+    try (JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8)) {
+      writeObject(jg, basicTypes);
+    }
   }
 
   private void writeObject(JsonGenerator jg, BasicTypes basicType) throws IOException {
