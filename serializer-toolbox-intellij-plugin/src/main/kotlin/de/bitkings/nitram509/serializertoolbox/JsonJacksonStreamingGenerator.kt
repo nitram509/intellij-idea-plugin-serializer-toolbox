@@ -27,21 +27,21 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.search.GlobalSearchScope
-import java.lang.Character.*
+import java.lang.Character.isLowerCase
+import java.lang.Character.toLowerCase
 
 class JsonJacksonStreamingGenerator {
 
   public fun generate(psiClass: PsiClass, fields: List<PsiField>) {
     object : WriteCommandAction.Simple<Unit>(psiClass.project, psiClass.containingFile) {
       override fun run() {
+        addJacksonFactoryField(psiClass)
         generateSerializeByFile(psiClass)
         generateSerializeByOutputStream(psiClass)
         generateWriteObject(psiClass, fields)
       }
     }.execute()
   }
-
-  // TODO: write JsonFactory jsonFactory = new JsonFactory(); as field, because quie expensive operation
 
   private fun generateSerializeByFile(psiClass: PsiClass) {
     importClassByName(psiClass, "java.io.File")
@@ -52,7 +52,6 @@ class JsonJacksonStreamingGenerator {
 
     val sb = StringBuilder()
     sb.append("public void serialize(File targetFile) throws IOException {\n")
-    sb.append("  JsonFactory jsonFactory = new JsonFactory();\n")
     sb.append("  try (JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8)) {\n")
     sb.append("    writeObject(jg, this);\n")
     sb.append("  }\n")
@@ -69,7 +68,6 @@ class JsonJacksonStreamingGenerator {
 
     val sb = StringBuilder()
     sb.append("public void serialize(OutputStream outputStream) throws IOException {\n")
-    sb.append("  JsonFactory jsonFactory = new JsonFactory();\n")
     sb.append("  try (JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8)) {\n")
     sb.append("    writeObject(jg, this);\n")
     sb.append("  }\n")
@@ -108,6 +106,12 @@ class JsonJacksonStreamingGenerator {
     JavaCodeStyleManager.getInstance(psiClass.project).shortenClassReferences(method)
   }
 
+  private fun addJacksonFactoryField(psiClass: PsiClass) {
+    val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
+    val newField = elementFactory.createFieldFromText("private final JsonFactory jsonFactory = new JsonFactory();", psiClass)
+    psiClass.add(newField)
+  }
+
   private fun addOrReplaceMethod(psiClass: PsiClass, newMethod: PsiMethod, methodName: String): PsiElement {
     val existingMethod = findMethod(psiClass, methodName)
     return if (existingMethod != null) existingMethod.replace(newMethod) else psiClass.add(newMethod)
@@ -133,7 +137,7 @@ class JsonJacksonStreamingGenerator {
         sb.append("jg.writeArray($instanceName.ints, 0 ,$instanceName." + field.name + ".length);");
       } else if (isWritableNumberType(deepType)) {
         sb.append("jg.writeNumber($instanceName.").append(field.name).append(");\n");
-      } else if (PsiType.BOOLEAN.equals(deepType)) {
+      } else if (PsiType.BOOLEAN == deepType) {
         sb.append("jg.writeBoolean($instanceName.").append(field.name).append(");\n");
       } else if (isJavaStringType(deepType)) {
         sb.append("jg.writeString($instanceName.").append(field.name).append(");\n");
