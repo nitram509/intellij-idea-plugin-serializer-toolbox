@@ -29,9 +29,9 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import org.junit.Test
 
-class JsonJacksonStreamingGeneratorTest : LightCodeInsightFixtureTestCase() {
+class JsonJacksonSerializerGeneratorTest : LightCodeInsightFixtureTestCase() {
 
-  private var generator: JsonJacksonStreamingGenerator = JsonJacksonStreamingGenerator()
+  private var generator: JsonJacksonSerializerGenerator = JsonJacksonSerializerGenerator()
 
   @Test
   fun test_generate_BASIC_TYPES_without_any_exceptions() {

@@ -32,14 +32,16 @@ import com.intellij.psi.util.PsiTreeUtil
 
 class JsonJacksonStreamingGeneratorAction() : AnAction("Json Serializer ...") {
 
-  private val jsonJacksonStreamingGenerator: JsonJacksonStreamingGenerator = JsonJacksonStreamingGenerator()
+  private val jsonJacksonSerializerGenerator = JsonJacksonSerializerGenerator()
+  private val jsonJacksonDeserializerGenerator = JsonJacksonDeserializerGenerator()
 
   override fun actionPerformed(e: AnActionEvent) {
     val psiClass = getPsiClassFromContext(e)
     val dlg = SelectFieldsDialog(psiClass!!)
     dlg.show()
     if (dlg.isOK) {
-      jsonJacksonStreamingGenerator.generate(psiClass, dlg.selectedFields)
+      jsonJacksonSerializerGenerator.generate(psiClass, dlg.selectedFields)
+      jsonJacksonDeserializerGenerator.generate(psiClass, dlg.selectedFields)
     }
   }
 

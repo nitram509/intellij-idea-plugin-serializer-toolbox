@@ -28,13 +28,14 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.impl.file.PsiDirectoryFactory
-import com.intellij.psi.search.GlobalSearchScope
 import java.lang.Character.isLowerCase
 import java.lang.Character.toLowerCase
 
-class JsonJacksonStreamingGenerator {
+class JsonJacksonSerializerGenerator {
 
-  public fun generate(thingClass: PsiClass, fields: List<PsiField>) {
+  private val typeToolbox = TypeToolbox()
+
+  fun generate(thingClass: PsiClass, fields: List<PsiField>) {
     object : WriteCommandAction.Simple<Unit>(thingClass.project, thingClass.containingFile) {
       override fun run() {
         val serializerName = thingClass.name + "Serializer"
@@ -64,11 +65,11 @@ class JsonJacksonStreamingGenerator {
   }
 
   private fun generateSerializeByFile(serializerClass: PsiClass, thingClass: PsiClass) {
-    importClassByName(serializerClass, "java.io.File")
-    importClassByName(serializerClass, "java.io.IOException")
-    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
-    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonGenerator")
-    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonEncoding")
+    typeToolbox.importClassByName(serializerClass, "java.io.File")
+    typeToolbox.importClassByName(serializerClass, "java.io.IOException")
+    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
+    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonGenerator")
+    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonEncoding")
     val instanceName = createInstanceNameDeclaration(thingClass)
     val sb = StringBuilder()
     sb.append("public void serialize(File targetFile, ${thingClass.name} $instanceName) throws IOException {\n")
@@ -80,11 +81,11 @@ class JsonJacksonStreamingGenerator {
   }
 
   private fun generateSerializeByOutputStream(serializerClass: PsiClass, thingClass: PsiClass) {
-    importClassByName(serializerClass, "java.io.OutputStream")
-    importClassByName(serializerClass, "java.io.IOException")
-    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
-    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonGenerator")
-    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonEncoding")
+    typeToolbox.importClassByName(serializerClass, "java.io.OutputStream")
+    typeToolbox.importClassByName(serializerClass, "java.io.IOException")
+    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
+    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonGenerator")
+    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonEncoding")
     val instanceName = createInstanceNameDeclaration(thingClass)
     val sb = StringBuilder()
     sb.append("public void serialize(OutputStream outputStream, ${thingClass.name} $instanceName) throws IOException {\n")
@@ -139,12 +140,7 @@ class JsonJacksonStreamingGenerator {
 
   private fun findMethod(psiClass: PsiClass, methodName: String): PsiMethod? {
     val allMethods = psiClass.allMethods
-    for (method in allMethods) {
-      if (psiClass.name == method.containingClass!!.name && methodName == method.name) {
-        return method
-      }
-    }
-    return null
+    return allMethods.firstOrNull { psiClass.name == it.containingClass!!.name && methodName == it.name }
   }
 
   private fun appendWriteFields(serializerClass: PsiClass, sb: StringBuilder, fields: List<PsiField>, instanceName: String) {
@@ -154,16 +150,16 @@ class JsonJacksonStreamingGenerator {
       val deepType = field.type.deepComponentType
       if (field.type.arrayDimensions == 1) {
         val methodName = "writeArray_${deepType.presentableText}"
-        ensureWriteArrayHelperMethodExists(serializerClass, deepType);
-        sb.append("$methodName(jg, $instanceName.${field.name});\n");
-      } else if (isWritableNumberType(deepType)) {
-        sb.append("jg.writeNumber($instanceName.${field.name});\n");
+        ensureWriteArrayHelperMethodExists(serializerClass, deepType)
+        sb.append("$methodName(jg, $instanceName.${field.name});\n")
+      } else if (typeToolbox.isWritableNumberType(deepType)) {
+        sb.append("jg.writeNumber($instanceName.${field.name});\n")
       } else if (PsiType.BOOLEAN == deepType) {
-        sb.append("jg.writeBoolean($instanceName.${field.name});\n");
-      } else if (isJavaStringType(deepType)) {
-        sb.append("jg.writeString($instanceName.${field.name});\n");
+        sb.append("jg.writeBoolean($instanceName.${field.name});\n")
+      } else if (typeToolbox.isJavaStringType(deepType)) {
+        sb.append("jg.writeString($instanceName.${field.name});\n")
       } else {
-        sb.append("jg.writeObject($instanceName.${field.name});\n");
+        sb.append("jg.writeObject($instanceName.${field.name});\n")
       }
     }
   }
@@ -176,14 +172,14 @@ class JsonJacksonStreamingGenerator {
     sb.append("private void $methodName(JsonGenerator jg, ${deepType.presentableText}[] array) throws IOException {\n")
     sb.append("  jg.writeStartArray();\n")
     sb.append("  for (${deepType.presentableText} val : array) {\n")
-    if (isWritableNumberType(deepType)) {
-      sb.append("    jg.writeNumber(val);\n");
+    if (typeToolbox.isWritableNumberType(deepType)) {
+      sb.append("    jg.writeNumber(val);\n")
     } else if (PsiType.BOOLEAN == deepType) {
-      sb.append("    jg.writeBoolean(val);\n");
-    } else if (isJavaStringType(deepType)) {
-      sb.append("    jg.writeString(val);\n");
+      sb.append("    jg.writeBoolean(val);\n")
+    } else if (typeToolbox.isJavaStringType(deepType)) {
+      sb.append("    jg.writeString(val);\n")
     } else {
-      sb.append("    jg.writeObject(val);\n");
+      sb.append("    jg.writeObject(val);\n")
     }
     sb.append("  }\n")
     sb.append("  jg.writeEndArray();\n")
@@ -191,29 +187,5 @@ class JsonJacksonStreamingGenerator {
     setNewMethod(serializerClass, sb.toString(), methodName)
   }
 
-  private fun isWritableNumberType(deepType: PsiType): Boolean {
-    val isBasisType = deepType in listOf(PsiType.BYTE, PsiType.SHORT, PsiType.INT, PsiType.LONG, PsiType.FLOAT, PsiType.DOUBLE)
-    return isBasisType || deepType.equalsToText("java.math.BigDecimal") || deepType.equalsToText("java.math.BigInteger")
-  }
-
-  private fun isJavaStringType(deepType: PsiType): Boolean {
-    return deepType.equalsToText("java.lang.String")
-  }
-
-  private fun importClassByName(psiClass: PsiClass, classNameToImport: String) {
-    val project = psiClass.project
-    val scope = GlobalSearchScope.allScope(project)
-    val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
-    val typeByName = PsiType.getTypeByName(classNameToImport, project, scope)
-    val resolvedPsiClass = typeByName.resolve()
-    // TODO: add import as comment, if class not found
-    if (resolvedPsiClass != null) {
-      val importStatement = elementFactory.createImportStatement(resolvedPsiClass)
-      val importList = (psiClass.containingFile as PsiJavaFile).importList
-      if (null == importList?.findSingleClassImportStatement(classNameToImport)) {
-        importList?.add(importStatement)
-      }
-    }
-  }
 
 }
