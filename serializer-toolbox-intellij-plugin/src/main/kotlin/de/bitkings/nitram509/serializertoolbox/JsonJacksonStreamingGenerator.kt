@@ -100,7 +100,7 @@ class JsonJacksonStreamingGenerator {
     val instanceName = createInstanceNameDeclaration(thingClass)
     sb.append("private void writeObject(JsonGenerator jg, ${thingClass.name} $instanceName) throws IOException {\n")
     sb.append("  jg.writeStartObject();\n")
-    appendWriteFields(sb, fields, instanceName)
+    appendWriteFields(serializerClass, sb, fields, instanceName)
     sb.append("        // done.\n")
     sb.append("  jg.writeEndObject();\n")
     sb.append("}")
@@ -147,24 +147,48 @@ class JsonJacksonStreamingGenerator {
     return null
   }
 
-  private fun appendWriteFields(sb: StringBuilder, fields: List<PsiField>, instanceName: String) {
+  private fun appendWriteFields(serializerClass: PsiClass, sb: StringBuilder, fields: List<PsiField>, instanceName: String) {
     for (field in fields) {
-      sb.append("        // write field ").append(field.name).append("...\n")
-      sb.append("jg.writeFieldName(\"").append(field.name).append("\");\n")
+      sb.append("        // write field ${field.name}...\n")
+      sb.append("jg.writeFieldName(\"${field.name}\");\n")
       val deepType = field.type.deepComponentType
-      val isCompatibleArrayBasisType = deepType in listOf(PsiType.INT, PsiType.LONG, PsiType.DOUBLE)
-      if (field.type.arrayDimensions == 1 && isCompatibleArrayBasisType) {
-        sb.append("jg.writeArray($instanceName.ints, 0 ,$instanceName." + field.name + ".length);");
+      if (field.type.arrayDimensions == 1) {
+        val methodName = "writeArray_${deepType.presentableText}"
+        ensureWriteArrayHelperMethodExists(serializerClass, deepType);
+        sb.append("$methodName(jg, $instanceName.${field.name});\n");
       } else if (isWritableNumberType(deepType)) {
-        sb.append("jg.writeNumber($instanceName.").append(field.name).append(");\n");
+        sb.append("jg.writeNumber($instanceName.${field.name});\n");
       } else if (PsiType.BOOLEAN == deepType) {
-        sb.append("jg.writeBoolean($instanceName.").append(field.name).append(");\n");
+        sb.append("jg.writeBoolean($instanceName.${field.name});\n");
       } else if (isJavaStringType(deepType)) {
-        sb.append("jg.writeString($instanceName.").append(field.name).append(");\n");
+        sb.append("jg.writeString($instanceName.${field.name});\n");
       } else {
-        sb.append("jg.writeObject($instanceName.").append(field.name).append(");\n");
+        sb.append("jg.writeObject($instanceName.${field.name});\n");
       }
     }
+  }
+
+  private fun ensureWriteArrayHelperMethodExists(serializerClass: PsiClass, deepType: PsiType) {
+    val methodName = "writeArray_${deepType.presentableText}"
+    val exists = serializerClass.methods.any { m -> m.name == methodName }
+    if (exists) return
+    val sb = StringBuilder()
+    sb.append("private void $methodName(JsonGenerator jg, ${deepType.presentableText}[] array) throws IOException {\n")
+    sb.append("  jg.writeStartArray();\n")
+    sb.append("  for (${deepType.presentableText} val : array) {\n")
+    if (isWritableNumberType(deepType)) {
+      sb.append("    jg.writeNumber(val);\n");
+    } else if (PsiType.BOOLEAN == deepType) {
+      sb.append("    jg.writeBoolean(val);\n");
+    } else if (isJavaStringType(deepType)) {
+      sb.append("    jg.writeString(val);\n");
+    } else {
+      sb.append("    jg.writeObject(val);\n");
+    }
+    sb.append("  }\n")
+    sb.append("  jg.writeEndArray();\n")
+    sb.append("}")
+    setNewMethod(serializerClass, sb.toString(), methodName)
   }
 
   private fun isWritableNumberType(deepType: PsiType): Boolean {
@@ -182,6 +206,7 @@ class JsonJacksonStreamingGenerator {
     val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
     val typeByName = PsiType.getTypeByName(classNameToImport, project, scope)
     val resolvedPsiClass = typeByName.resolve()
+    // TODO: add import as comment, if class not found
     if (resolvedPsiClass != null) {
       val importStatement = elementFactory.createImportStatement(resolvedPsiClass)
       val importList = (psiClass.containingFile as PsiJavaFile).importList

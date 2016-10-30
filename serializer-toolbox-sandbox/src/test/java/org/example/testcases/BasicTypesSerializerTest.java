@@ -53,6 +53,7 @@ public class BasicTypesSerializerTest {
         "   \"aFloat\": 23.23," +
         "   \"aDouble\": 42.42," +
         "   \"aInt\": 65536," +
+        "   \"aChar\": \"c\"," +
         "   \"aShort\": 128," +
         "   \"aByte\": -5" +
         "}";
@@ -67,6 +68,7 @@ public class BasicTypesSerializerTest {
     basicTypes.aFloat = 23.23f;
     basicTypes.aDouble = 42.42d;
     basicTypes.aInt = 65536;
+    basicTypes.aChar = 'c';
     basicTypes.aShort = 128;
     basicTypes.aByte = -5;
     return basicTypes;

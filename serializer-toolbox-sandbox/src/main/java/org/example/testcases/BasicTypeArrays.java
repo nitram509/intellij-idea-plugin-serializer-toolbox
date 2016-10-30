@@ -23,13 +23,13 @@
 
 package org.example.testcases;
 
-public class BasicTypes {
-  public String aString;
-  public boolean aBoolean;
-  public float aFloat;
-  public double aDouble;
-  public int aInt;
-  public char aChar;
-  public short aShort;
-  public byte aByte;
+public class BasicTypeArrays {
+  public String[] strings;
+  public boolean[] booleans;
+  public float[] floats;
+  public double[] doubles;
+  public int[] ints;
+  public char[] chars;
+  public short[] shorts;
+  public byte[] bytes;
 }

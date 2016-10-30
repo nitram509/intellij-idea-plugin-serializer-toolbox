@@ -29,6 +29,7 @@ public class BasicTypes {
   public float aFloat;
   public double aDouble;
   public int aInt;
+  public char aChar;
   public short aShort;
   public byte aByte;
 }
