@@ -26,14 +26,11 @@ package de.bitkings.nitram509.serializertoolbox
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.psi.*
-import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.impl.file.PsiDirectoryFactory
-import java.lang.Character.isLowerCase
-import java.lang.Character.toLowerCase
 
 class JsonJacksonDeserializerGenerator {
 
-  private val typeToolbox = TypeToolbox()
+  private val psiToolbox = PsiToolbox()
 
   fun generate(thingClass: PsiClass, fields: List<PsiField>) {
     object : WriteCommandAction.Simple<Unit>(thingClass.project, thingClass.containingFile) {
@@ -65,69 +62,50 @@ class JsonJacksonDeserializerGenerator {
   }
 
   private fun generateDeserializeByFile(serializerClass: PsiClass, thingClass: PsiClass) {
-    typeToolbox.importClassByName(serializerClass, "java.io.File")
-    typeToolbox.importClassByName(serializerClass, "java.io.IOException")
-    typeToolbox.importClassByName(serializerClass, "java.io.FileInputStream")
-    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
-    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonToken")
-    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonParser")
+    psiToolbox.importClassByName(serializerClass, "java.io.File")
+    psiToolbox.importClassByName(serializerClass, "java.io.IOException")
+    psiToolbox.importClassByName(serializerClass, "java.io.FileInputStream")
+    psiToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
+    psiToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonToken")
+    psiToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonParser")
     val sb = StringBuilder()
     sb.append("public ${thingClass.name} deserialize(File sourceFile) throws IOException {\n")
     sb.append("    return deserialize(new FileInputStream(sourceFile));\n")
     sb.append("}\n")
-    setNewMethod(serializerClass, sb.toString(), "serializeFile")
+    psiToolbox.setNewMethod(serializerClass, sb.toString(), "serializeFile")
   }
 
   private fun generateDeserializeByOutputStream(serializerClass: PsiClass, thingClass: PsiClass) {
-    typeToolbox.importClassByName(serializerClass, "java.io.InputStream")
-    typeToolbox.importClassByName(serializerClass, "java.io.IOException")
-    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
-    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonToken")
-    typeToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonParser")
+    psiToolbox.importClassByName(serializerClass, "java.io.InputStream")
+    psiToolbox.importClassByName(serializerClass, "java.io.IOException")
+    psiToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
+    psiToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonToken")
+    psiToolbox.importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonParser")
     val sb = StringBuilder()
     sb.append("public ${thingClass.name} deserialize(InputStream inputStream) throws IOException {\n")
     sb.append("  try (JsonParser jp = jsonFactory.createParser(inputStream)) {\n")
     sb.append("    return readObject(jp);\n")
     sb.append("  }\n")
     sb.append("}\n")
-    setNewMethod(serializerClass, sb.toString(), "serializeOutputStream")
+    psiToolbox.setNewMethod(serializerClass, sb.toString(), "serializeOutputStream")
   }
 
   private fun generateReadObject(serializerClass: PsiClass, thingClass: PsiClass, fields: List<PsiField>) {
     val sb = StringBuilder()
-    val instanceName = createInstanceNameDeclaration(thingClass)
+    val instanceName = psiToolbox.createInstanceNameDeclaration(thingClass)
     sb.append("private ${thingClass.name} readObject(JsonParser jp) throws IOException {\n")
     sb.append("  BasicTypes $instanceName = new BasicTypes();\n")
     sb.append("  for (JsonToken jsonToken; (jsonToken = jp.nextToken()) != null && (jsonToken != JsonToken.END_OBJECT); ) {\n")
     sb.append("    if (JsonToken.FIELD_NAME != jsonToken) continue;\n")
     sb.append("    final String fieldName = jp.getCurrentName();\n")
     sb.append("    switch (fieldName) {\n")
-    appendReadFields(serializerClass, sb, fields, instanceName)
+    appendReadFields(sb, fields, instanceName)
     sb.append("       default: // decide what to do;\n")
     sb.append("    }\n")
     sb.append("  }\n")
     sb.append("  return $instanceName;\n")
     sb.append("}")
-    setNewMethod(serializerClass, sb.toString(), "writeObject")
-  }
-
-  private fun createInstanceNameDeclaration(thingClass: PsiClass): String {
-    val clzName = thingClass.name
-    if (clzName != null) {
-      val firstLetter = clzName.toCharArray()[0]
-      if (isLowerCase(firstLetter)) {
-        return "$$clzName"
-      }
-      return toLowerCase(firstLetter) + clzName.substring(1)
-    }
-    throw UnsupportedOperationException("Not supported yet.")
-  }
-
-  private fun setNewMethod(psiClass: PsiClass, newMethodBody: String, methodName: String) {
-    val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
-    val newEqualsMethod = elementFactory.createMethodFromText(newMethodBody, psiClass)
-    val method = addOrReplaceMethod(psiClass, newEqualsMethod, methodName)
-    JavaCodeStyleManager.getInstance(psiClass.project).shortenClassReferences(method)
+    psiToolbox.setNewMethod(serializerClass, sb.toString(), "writeObject")
   }
 
   private fun addJacksonFactoryField(serializerClass: PsiClass) {
@@ -136,22 +114,7 @@ class JsonJacksonDeserializerGenerator {
     serializerClass.add(newField)
   }
 
-  private fun addOrReplaceMethod(psiClass: PsiClass, newMethod: PsiMethod, methodName: String): PsiElement {
-    val existingMethod = findMethod(psiClass, methodName)
-    return if (existingMethod != null) existingMethod.replace(newMethod) else psiClass.add(newMethod)
-  }
-
-  private fun findMethod(psiClass: PsiClass, methodName: String): PsiMethod? {
-    val allMethods = psiClass.allMethods
-    for (method in allMethods) {
-      if (psiClass.name == method.containingClass!!.name && methodName == method.name) {
-        return method
-      }
-    }
-    return null
-  }
-
-  private fun appendReadFields(serializerClass: PsiClass, sb: StringBuilder, fields: List<PsiField>, instanceName: String) {
+  private fun appendReadFields(sb: StringBuilder, fields: List<PsiField>, instanceName: String) {
     for (field in fields) {
       val deepType = field.type.deepComponentType
       sb.append("    case \"${field.name}\":\n")
@@ -164,13 +127,15 @@ class JsonJacksonDeserializerGenerator {
         sb.append("      $instanceName.${field.name} = jp.getShortValue();\n")
       } else if (PsiType.INT == deepType) {
         sb.append("      $instanceName.${field.name} = jp.getIntValue();\n")
+      } else if (PsiType.CHAR == deepType) {
+        sb.append("      $instanceName.${field.name} = jp.getText().charAt(0);\n")
       } else if (PsiType.DOUBLE == deepType) {
         sb.append("      $instanceName.${field.name} = jp.getDoubleValue();\n")
       } else if (PsiType.FLOAT == deepType) {
         sb.append("      $instanceName.${field.name} = jp.getFloatValue();\n")
       } else if (PsiType.BOOLEAN == deepType) {
         sb.append("      $instanceName.${field.name} = jp.getBooleanValue();\n")
-      } else if (typeToolbox.isJavaStringType(deepType)) {
+      } else if (psiToolbox.isJavaStringType(deepType)) {
         sb.append("      $instanceName.${field.name} = jp.getText();\n")
       } else {
         // TODO ...
