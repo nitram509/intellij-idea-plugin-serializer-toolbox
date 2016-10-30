@@ -41,8 +41,7 @@ class JsonJacksonStreamingGeneratorTest : LightCodeInsightFixtureTestCase() {
     generator.generate(psiClass, findAllFields(psiClass))
 
     // assert no exception
-    println(psiClass.text)
-    println((this.psiManager.findFile(sampleFile) as PsiJavaFile).classes[0])
+    println(myFixture.findClass("org.example.testcases.BasicTypesSerializer").text)
   }
 
   private fun findAllFields(psiClass: PsiClass): List<PsiField> {
