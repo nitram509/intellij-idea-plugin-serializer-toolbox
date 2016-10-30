@@ -34,13 +34,15 @@ class JsonJacksonStreamingGeneratorTest : LightCodeInsightFixtureTestCase() {
   private var generator: JsonJacksonStreamingGenerator = JsonJacksonStreamingGenerator()
 
   @Test
-  fun test_a_test() {
+  fun test_generate_without_any_exceptions() {
     val sampleFile = myFixture.copyFileToProject("src/test/java/org/example/testcases/BasicTypes.java")
     val psiClass = (this.psiManager.findFile(sampleFile) as PsiJavaFile).classes[0]
 
     generator.generate(psiClass, findAllFields(psiClass))
 
+    // assert no exception
     println(psiClass.text)
+    println((this.psiManager.findFile(sampleFile) as PsiJavaFile).classes[0])
   }
 
   private fun findAllFields(psiClass: PsiClass): List<PsiField> {

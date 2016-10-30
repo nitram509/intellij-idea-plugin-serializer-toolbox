@@ -24,71 +24,91 @@
 package de.bitkings.nitram509.serializertoolbox
 
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
+import com.intellij.psi.impl.file.PsiDirectoryFactory
 import com.intellij.psi.search.GlobalSearchScope
 import java.lang.Character.isLowerCase
 import java.lang.Character.toLowerCase
 
 class JsonJacksonStreamingGenerator {
 
-  public fun generate(psiClass: PsiClass, fields: List<PsiField>) {
-    object : WriteCommandAction.Simple<Unit>(psiClass.project, psiClass.containingFile) {
+  public fun generate(thingClass: PsiClass, fields: List<PsiField>) {
+    object : WriteCommandAction.Simple<Unit>(thingClass.project, thingClass.containingFile) {
       override fun run() {
-        addJacksonFactoryField(psiClass)
-        generateSerializeByFile(psiClass)
-        generateSerializeByOutputStream(psiClass)
-        generateWriteObject(psiClass, fields)
+        val serializerName = thingClass.name + "Serializer"
+        val serializerClass = JavaPsiFacade.getElementFactory(thingClass.project).createClass(serializerName)
+        addJacksonFactoryField(serializerClass)
+        generateSerializeByFile(serializerClass, thingClass)
+        generateSerializeByOutputStream(serializerClass, thingClass)
+        generateWriteObject(serializerClass, thingClass, fields)
+
+        val serializerFile = createSerializerJavaSourceFile(thingClass)
+        serializerFile.packageName = (thingClass.containingFile as PsiJavaFile).packageName
+        serializerFile.add(serializerClass)
+        FileEditorManager
+            .getInstance(thingClass.project)
+            .openFile(serializerFile.virtualFile, true)
       }
     }.execute()
   }
 
-  private fun generateSerializeByFile(psiClass: PsiClass) {
-    importClassByName(psiClass, "java.io.File")
-    importClassByName(psiClass, "java.io.IOException")
-    importClassByName(psiClass, "com.fasterxml.jackson.core.JsonFactory")
-    importClassByName(psiClass, "com.fasterxml.jackson.core.JsonGenerator")
-    importClassByName(psiClass, "com.fasterxml.jackson.core.JsonEncoding")
+  private fun createSerializerJavaSourceFile(thingClass: PsiClass): PsiJavaFile {
+    val directoryFactory = PsiDirectoryFactory.getInstance(thingClass.project)
+    val parentDirectory = directoryFactory.createDirectory(thingClass.containingFile.virtualFile.parent)
+    val serializerName = thingClass.name + "Serializer"
+    // TODO: handle case where file already exists
+    val serializerFile = parentDirectory.createFile("$serializerName.java") as PsiJavaFile
+    return serializerFile
+  }
 
+  private fun generateSerializeByFile(serializerClass: PsiClass, thingClass: PsiClass) {
+    importClassByName(serializerClass, "java.io.File")
+    importClassByName(serializerClass, "java.io.IOException")
+    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
+    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonGenerator")
+    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonEncoding")
+    val instanceName = createInstanceNameDeclaration(thingClass)
     val sb = StringBuilder()
-    sb.append("public void serialize(File targetFile) throws IOException {\n")
+    sb.append("public void serialize(File targetFile, ${thingClass.name} $instanceName) throws IOException {\n")
     sb.append("  try (JsonGenerator jg = jsonFactory.createGenerator(targetFile, JsonEncoding.UTF8)) {\n")
-    sb.append("    writeObject(jg, this);\n")
+    sb.append("    writeObject(jg, $instanceName);\n")
     sb.append("  }\n")
     sb.append("}\n")
-    setNewMethod(psiClass, sb.toString(), "serializeFile")
+    setNewMethod(serializerClass, sb.toString(), "serializeFile")
   }
 
-  private fun generateSerializeByOutputStream(psiClass: PsiClass) {
-    importClassByName(psiClass, "java.io.OutputStream")
-    importClassByName(psiClass, "java.io.IOException")
-    importClassByName(psiClass, "com.fasterxml.jackson.core.JsonFactory")
-    importClassByName(psiClass, "com.fasterxml.jackson.core.JsonGenerator")
-    importClassByName(psiClass, "com.fasterxml.jackson.core.JsonEncoding")
-
+  private fun generateSerializeByOutputStream(serializerClass: PsiClass, thingClass: PsiClass) {
+    importClassByName(serializerClass, "java.io.OutputStream")
+    importClassByName(serializerClass, "java.io.IOException")
+    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonFactory")
+    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonGenerator")
+    importClassByName(serializerClass, "com.fasterxml.jackson.core.JsonEncoding")
+    val instanceName = createInstanceNameDeclaration(thingClass)
     val sb = StringBuilder()
-    sb.append("public void serialize(OutputStream outputStream) throws IOException {\n")
+    sb.append("public void serialize(OutputStream outputStream, ${thingClass.name} $instanceName) throws IOException {\n")
     sb.append("  try (JsonGenerator jg = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8)) {\n")
-    sb.append("    writeObject(jg, this);\n")
+    sb.append("    writeObject(jg, $instanceName);\n")
     sb.append("  }\n")
     sb.append("}\n")
-    setNewMethod(psiClass, sb.toString(), "serializeOutputStream")
+    setNewMethod(serializerClass, sb.toString(), "serializeOutputStream")
   }
 
-  private fun generateWriteObject(psiClass: PsiClass, fields: List<PsiField>) {
+  private fun generateWriteObject(serializerClass: PsiClass, thingClass: PsiClass, fields: List<PsiField>) {
     val sb = StringBuilder()
-    val instanceName = createInstanceNameDeclaration(psiClass)
-    sb.append("private void writeObject(JsonGenerator jg, ${psiClass.name} " + instanceName + ") throws IOException {\n")
+    val instanceName = createInstanceNameDeclaration(thingClass)
+    sb.append("private void writeObject(JsonGenerator jg, ${thingClass.name} $instanceName) throws IOException {\n")
     sb.append("  jg.writeStartObject();\n")
     appendWriteFields(sb, fields, instanceName)
     sb.append("        // done.\n")
     sb.append("  jg.writeEndObject();\n")
     sb.append("}")
-    setNewMethod(psiClass, sb.toString(), "writeObject")
+    setNewMethod(serializerClass, sb.toString(), "writeObject")
   }
 
-  private fun createInstanceNameDeclaration(psiClass: PsiClass): String {
-    val clzName = psiClass.name
+  private fun createInstanceNameDeclaration(thingClass: PsiClass): String {
+    val clzName = thingClass.name
     if (clzName != null) {
       val firstLetter = clzName.toCharArray()[0]
       if (isLowerCase(firstLetter)) {
@@ -106,10 +126,10 @@ class JsonJacksonStreamingGenerator {
     JavaCodeStyleManager.getInstance(psiClass.project).shortenClassReferences(method)
   }
 
-  private fun addJacksonFactoryField(psiClass: PsiClass) {
-    val elementFactory = JavaPsiFacade.getElementFactory(psiClass.project)
-    val newField = elementFactory.createFieldFromText("private final JsonFactory jsonFactory = new JsonFactory();", psiClass)
-    psiClass.add(newField)
+  private fun addJacksonFactoryField(serializerClass: PsiClass) {
+    val elementFactory = JavaPsiFacade.getElementFactory(serializerClass.project)
+    val newField = elementFactory.createFieldFromText("private final JsonFactory jsonFactory = new JsonFactory();", serializerClass)
+    serializerClass.add(newField)
   }
 
   private fun addOrReplaceMethod(psiClass: PsiClass, newMethod: PsiMethod, methodName: String): PsiElement {
